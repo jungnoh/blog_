@@ -1,17 +1,16 @@
-import { GetStaticPropsContext } from "next";
+import { GetStaticPropsContext, GetStaticPropsResult } from "next";
 import React from "react";
-import PostLoader, { SerializablePost, toSerializable } from "../../lib/posts";
+import PostLoader from "../../lib/posts";
+import { Post } from "../../lib/types";
 
-type PostProps = SerializablePost;
-
-export default function PostPage(props: PostProps) {
+export default function PostPage(props: Post) {
   return <div>{JSON.stringify(props)}</div>;
 }
 
-export async function getStaticProps(context: GetStaticPropsContext) {
+export async function getStaticProps(context: GetStaticPropsContext): Promise<GetStaticPropsResult<Post>> {
   await PostLoader.load();
   return {
-    props: toSerializable(await PostLoader.post(context.params.slug as string))[0] 
+    props: await PostLoader.post(context.params.slug as string)
   };
 }
 

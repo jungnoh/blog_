@@ -2,46 +2,15 @@ import frontMatter from "front-matter";
 import fs from "fs";
 import path from "path";
 import { DateTime } from "luxon";
+import { InternalPost, Pagination, Post } from "./types";
 
-const SINGLETON_KEY = Symbol("post_loader");
-
-export interface Pagination {
-  pageCount: number;
-  currentPage: number;
-  hasPrev: boolean;
-  hasNext: boolean;
-  posts: Post[];
-}
-
-interface BasePost {
-  title: string;
-  slug: string;
-  tags: string[];
-  category: string;
-  content: string;
-}
-
-export interface Post extends BasePost {
-  date: DateTime;
-}
-
-export interface SerializablePost extends BasePost {
-  date: string;
-}
-
-interface InternalPost extends Post {
-  path: string;
+interface TagListItem {
+  name: string;
+  pages: number;
 }
 
 const PAGE_SIZE = 10;
 const POST_EXTS = ["md", "mdx"];
-
-export function toSerializable(...posts: Post[]): SerializablePost[] {
-  return posts.map(v => ({
-    ...v,
-    date: v.date.toISO()
-  }));
-}
 
 class PostLoader {
   private loaded = false;
@@ -72,7 +41,6 @@ class PostLoader {
       if (!stat.isFile()) {
         continue;
       }
-      console.log(filename);
       const file = await fs.promises.readFile(filePath, "utf-8");
       const fmContent = frontMatter<Partial<Post>>(file);
       if (!fmContent.attributes.title || !fmContent.attributes.slug || !fmContent.attributes.date) {
@@ -84,8 +52,8 @@ class PostLoader {
         title: fmContent.attributes.title!,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         slug: fmContent.attributes.slug!,
-        date: DateTime.fromFormat(fmContent.attributes.date as unknown as string, "yyyy-MM-dd hh:mm", {zone: "Asia/Seoul"}),
-        tags: (fmContent.attributes.tags as unknown as string ?? "").split(",").map(v => v.trim()),
+        date: fmContent.attributes.date as unknown as string,
+        tags: (fmContent.attributes.tags as unknown as string ?? "").split(",").map(v => v.trim()).filter(v => v !== ""),
         category: fmContent.attributes.category ?? "Uncategorized",
         content: fmContent.body,
         path: filePath,
@@ -95,7 +63,7 @@ class PostLoader {
         console.log(`Skipping ${filename}: Duplicate slug with ${this.posts.get(newPost.slug).title}`);
       }
       this.posts.set(newPost.slug, newPost);
-      fileSortList.push({slug: newPost.slug, date: newPost.date});
+      fileSortList.push({slug: newPost.slug, date: DateTime.fromFormat(newPost.date, "yyyy-MM-dd hh:mm", {zone: "Asia/Seoul"})});
     }
     // Sort and populate tag and category maps
     this.postViewOrder = fileSortList.sort((a, b) => b.date > a.date ? -1 : b.date == a.date ? 0 : 1).map(v => v.slug);
@@ -115,40 +83,75 @@ class PostLoader {
     this.postCount = fileSortList.length;
   }
 
+  private postPage(slugList: string[], page: number): Post[] {
+    return slugList.slice((page - 1)*PAGE_SIZE, page*PAGE_SIZE).map(v => this.posts.get(v));
+  }
+
+  private pageCount(totalCount: number): number {
+    return Math.floor(Math.max(0, (totalCount - 1) / PAGE_SIZE) + 1);
+  }
+
   archivePosts(page = 1): Pagination {
-    const pageCount = Math.floor(Math.max(0, this.postCount - 1) / PAGE_SIZE);
+    const pages = this.pageCount(this.postCount);
     return {
       currentPage: page,
-      pageCount,
-      hasNext: page < pageCount,
+      pageCount: pages,
+      hasNext: page < pages,
       hasPrev: page > 1,
-      posts: this.postViewOrder.slice((page - 1)*PAGE_SIZE, page*PAGE_SIZE).map(v => this.posts.get(v))
+      posts: this.postPage(this.postViewOrder, page)
+    };
+  }
+  archivePageCount() {
+    return this.pageCount(this.postCount);
+  }
+
+  categoryList(): TagListItem[] {
+    const result = [];
+    this.categoryMap.forEach((value, key) => {
+      result.push({
+        name: key,
+        pages: this.pageCount(value.length)
+      });
+    });
+    return result;
+  }
+  categoryPage(name: string, page = 1): Pagination | undefined {
+    if (!this.categoryMap.has(name)) {
+      return undefined;
+    }
+    const categoryItems = this.categoryMap.get(name);
+    const pages = this.pageCount(categoryItems.length);
+    return {
+      currentPage: page,
+      pageCount: pages,
+      hasNext: page < pages,
+      hasPrev: page > 1,
+      posts: this.postPage(categoryItems, page)
     };
   }
 
-  categoryList(): string[] {
-    return [...this.categoryMap.keys()];
+  tagList(): TagListItem[] {
+    const result = [];
+    this.tagMap.forEach((value, key) => {
+      result.push({
+        name: key,
+        pages: this.pageCount(value.length)
+      });
+    });
+    return result;
   }
-  categoryPage(name: string, page = 1): Pagination {
+  tagPage(name: string, page = 1): Pagination {
+    if (!this.tagMap.has(name)) {
+      return undefined;
+    }
+    const tagItems = this.tagMap.get(name);
+    const pages = this.pageCount(tagItems.length);
     return {
-      currentPage: 5,
-      pageCount: 10,
-      hasNext: true,
-      hasPrev: true,
-      posts: []
-    };
-  }
-
-  tagList(): string[] {
-    return [...this.tagMap.keys()];
-  }
-  tagPosts(name: string, page = 1): Pagination {
-    return {
-      currentPage: 5,
-      pageCount: 10,
-      hasNext: true,
-      hasPrev: true,
-      posts: []
+      currentPage: page,
+      pageCount: pages,
+      hasNext: page < pages,
+      hasPrev: page > 1,
+      posts: this.postPage(tagItems, page)
     };
   }
 
