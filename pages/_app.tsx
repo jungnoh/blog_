@@ -15,7 +15,7 @@ const Header = styled.header`
   align-items: center;
   justify-content: flex-end;
   & > a {
-    margin-left: .5em;
+    margin-left: 0.5em;
   }
 `;
 

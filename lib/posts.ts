@@ -29,13 +29,15 @@ class PostLoader {
     this.loaded = true;
     console.log("Reading post list");
 
-    const fileSortList: {slug: string; date: DateTime}[] = [];
+    const fileSortList: { slug: string; date: DateTime }[] = [];
 
     const basePath = path.join(process.cwd(), "docs");
     const files = await fs.promises.readdir(basePath);
     for (const filename of files) {
       const filePath = path.join(basePath, filename);
-      if (!POST_EXTS.includes(path.extname(filePath).toLowerCase().substring(1)))  {
+      if (
+        !POST_EXTS.includes(path.extname(filePath).toLowerCase().substring(1))
+      ) {
         continue;
       }
       const stat = await fs.promises.stat(filePath);
@@ -44,8 +46,14 @@ class PostLoader {
       }
       const file = await fs.promises.readFile(filePath, "utf-8");
       const fmContent = frontMatter<Partial<Post>>(file);
-      if (!fmContent.attributes.title || !fmContent.attributes.slug || !fmContent.attributes.date) {
-        console.log(`Skipping ${filename}: Missing required metadata attributes`);
+      if (
+        !fmContent.attributes.title ||
+        !fmContent.attributes.slug ||
+        !fmContent.attributes.date
+      ) {
+        console.log(
+          `Skipping ${filename}: Missing required metadata attributes`
+        );
         continue;
       }
       const newPost: InternalPost = {
@@ -54,26 +62,43 @@ class PostLoader {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         slug: fmContent.attributes.slug!,
         date: fmContent.attributes.date as unknown as string,
-        tags: (fmContent.attributes.tags as unknown as string ?? "").split(",").map(v => v.trim()).filter(v => v !== ""),
+        tags: ((fmContent.attributes.tags as unknown as string) ?? "")
+          .split(",")
+          .map((v) => v.trim())
+          .filter((v) => v !== ""),
         category: fmContent.attributes.category ?? "Uncategorized",
         content: fmContent.body,
         path: filePath,
       };
 
       if (this.posts.has(newPost.slug)) {
-        console.log(`Skipping ${filename}: Duplicate slug with ${this.posts.get(newPost.slug).title}`);
+        console.log(
+          `Skipping ${filename}: Duplicate slug with ${
+            this.posts.get(newPost.slug).title
+          }`
+        );
       }
       this.posts.set(newPost.slug, newPost);
-      fileSortList.push({slug: newPost.slug, date: DateTime.fromFormat(newPost.date, "yyyy-MM-dd hh:mm", {zone: "Asia/Seoul"})});
+      fileSortList.push({
+        slug: newPost.slug,
+        date: DateTime.fromFormat(newPost.date, "yyyy-MM-dd hh:mm", {
+          zone: "Asia/Seoul",
+        }),
+      });
     }
     // Sort and populate tag and category maps
-    this.postViewOrder = fileSortList.sort((a, b) => b.date > a.date ? -1 : b.date == a.date ? 0 : 1).map(v => v.slug);
+    this.postViewOrder = fileSortList
+      .sort((a, b) => (b.date > a.date ? -1 : b.date == a.date ? 0 : 1))
+      .map((v) => v.slug);
     for (const slug of this.postViewOrder) {
       const post = this.posts.get(slug);
       if (!this.categoryMap.has(post.category)) {
         this.categoryMap.set(post.category, []);
       }
-      this.categoryMap.set(post.category, [...this.categoryMap.get(post.category), slug]);
+      this.categoryMap.set(post.category, [
+        ...this.categoryMap.get(post.category),
+        slug,
+      ]);
       for (const tag of post.tags) {
         if (!this.tagMap.has(tag)) {
           this.tagMap.set(tag, []);
@@ -85,7 +110,9 @@ class PostLoader {
   }
 
   private postPage(slugList: string[], page: number): Post[] {
-    return slugList.slice((page - 1)*PAGE_SIZE, page*PAGE_SIZE).map(v => this.posts.get(v));
+    return slugList
+      .slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+      .map((v) => this.posts.get(v));
   }
 
   private pageCount(totalCount: number): number {
@@ -99,7 +126,7 @@ class PostLoader {
       pageCount: pages,
       hasNext: page < pages,
       hasPrev: page > 1,
-      posts: this.postPage(this.postViewOrder, page)
+      posts: this.postPage(this.postViewOrder, page),
     };
   }
   archivePageCount() {
@@ -111,7 +138,7 @@ class PostLoader {
     this.categoryMap.forEach((value, key) => {
       result.push({
         name: key,
-        pages: this.pageCount(value.length)
+        pages: this.pageCount(value.length),
       });
     });
     return result;
@@ -127,7 +154,7 @@ class PostLoader {
       pageCount: pages,
       hasNext: page < pages,
       hasPrev: page > 1,
-      posts: this.postPage(categoryItems, page)
+      posts: this.postPage(categoryItems, page),
     };
   }
 
@@ -136,7 +163,7 @@ class PostLoader {
     this.tagMap.forEach((value, key) => {
       result.push({
         name: key,
-        pages: this.pageCount(value.length)
+        pages: this.pageCount(value.length),
       });
     });
     return result;
@@ -152,7 +179,7 @@ class PostLoader {
       pageCount: pages,
       hasNext: page < pages,
       hasPrev: page > 1,
-      posts: this.postPage(tagItems, page)
+      posts: this.postPage(tagItems, page),
     };
   }
 

@@ -1,7 +1,7 @@
 import { GetStaticPropsResult } from "next";
 import React from "react";
-import TagList from "../../components/TagList";
-import PostLoader from "../../lib/posts";
+import TagList from "@/components/TagList";
+import PostLoader from "@/lib/posts";
 
 interface CategoryListPageProps {
   names: string[];

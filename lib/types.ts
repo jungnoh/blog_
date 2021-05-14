@@ -1,4 +1,3 @@
-
 export interface Pagination {
   pageCount: number;
   currentPage: number;
