@@ -26,6 +26,7 @@ class PostLoader {
       await Promise.resolve();
       return;
     }
+    this.loaded = true;
     console.log("Reading post list");
 
     const fileSortList: {slug: string; date: DateTime}[] = [];

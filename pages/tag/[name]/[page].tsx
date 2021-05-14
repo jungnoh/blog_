@@ -1,16 +1,24 @@
 import { GetStaticPropsContext, GetStaticPropsResult } from "next";
 import React from "react";
+import PostList from "../../../components/PostList";
 import PostLoader from "../../../lib/posts";
 import { Pagination } from "../../../lib/types";
 
-export default function CategoryPage(props: Pagination) {
-  return <div>{JSON.stringify(props, null, 2)}</div>;
+interface TagPageProps extends Pagination {
+  title: string;
 }
 
-export async function getStaticProps(context: GetStaticPropsContext): Promise<GetStaticPropsResult<Pagination>> {
+export default function TagPage(props: TagPageProps) {
+  return <PostList {...props} />;
+}
+
+export async function getStaticProps(context: GetStaticPropsContext): Promise<GetStaticPropsResult<TagPageProps>> {
   await PostLoader.load();
   return {
-    props: PostLoader.tagPage(context.params.name as string, parseInt(context.params.page as string))
+    props: {
+      ...PostLoader.tagPage(context.params.name as string, parseInt(context.params.page as string)),
+      title: context.params.name as string
+    }
   };
 }
 

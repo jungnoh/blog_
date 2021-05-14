@@ -1,18 +1,15 @@
 import { GetStaticPropsResult } from "next";
 import React from "react";
+import TagList from "../../components/TagList";
 import PostLoader from "../../lib/posts";
 
 interface CategoryListPageProps {
   names: string[];
 }
 
-export default function CategoryList(props: CategoryListPageProps) {
+export default function CategoryListPage(props: CategoryListPageProps) {
   return (
-    <div>
-      <ul>
-        {props.names.map(v => (<li key={v}><a href={`/category/${v}/1`}>{v}</a></li>))}
-      </ul>
-    </div>
+    <TagList names={props.names} title="categories" />
   );
 }
 

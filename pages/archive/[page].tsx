@@ -1,10 +1,13 @@
 import { GetStaticPropsContext, GetStaticPropsResult } from "next";
 import React from "react";
+import PostList from "../../components/PostList";
 import PostLoader from "../../lib/posts";
 import { Pagination } from "../../lib/types";
 
 export default function CategoryPage(props: Pagination) {
-  return <div>{JSON.stringify(props, null, 2)}</div>;
+  return (
+    <PostList {...props} title="archive" />
+  );
 }
 
 export async function getStaticProps(context: GetStaticPropsContext): Promise<GetStaticPropsResult<Pagination>> {

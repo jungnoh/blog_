@@ -1,17 +1,26 @@
 import { GetStaticPropsContext, GetStaticPropsResult } from "next";
+import { useRouter } from "next/dist/client/router";
 import React from "react";
+import PostList from "../../../components/PostList";
 import PostLoader from "../../../lib/posts";
 import { Pagination } from "../../../lib/types";
 
-export default function CategoryPage(props: Pagination) {
-  return <div>{JSON.stringify(props, null, 2)}</div>;
+interface CategoryPageProps extends Pagination {
+  title: string;
 }
 
-export async function getStaticProps(context: GetStaticPropsContext): Promise<GetStaticPropsResult<Pagination>> {
+export default function CategoryPage(props: CategoryPageProps) {
+  return <PostList {...props} />;
+}
+
+export async function getStaticProps(context: GetStaticPropsContext): Promise<GetStaticPropsResult<CategoryPageProps>> {
   await PostLoader.load();
   const paginator = PostLoader.categoryPage(context.params.name as string, parseInt(context.params.page as string));
   return {
-    props: paginator
+    props: {
+      ...paginator,
+      title: context.params.name as string
+    }
   };
 }
 
