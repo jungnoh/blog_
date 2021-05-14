@@ -13,6 +13,11 @@ module.exports = {
         source: "/archive",
         destination: "/archive/1",
         permanent: true,
+      },
+      {
+        source: "/category/:name",
+        destination: "/category/:name/1",
+        permanent: true
       }
     ];
   }
